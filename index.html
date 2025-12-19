@@ -2,153 +2,182 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Central Inteligente</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Central Inteligente</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f6f6f6;
-  display: flex;
-  justify-content: center;
-  padding: 20px;
-}
-.container {
-  background: #fff;
-  width: 100%;
-  max-width: 700px;
-  padding: 20px;
-  border-radius: 10px;
-}
-form {
-  display: flex;
-  gap: 10px;
-}
-input {
-  flex: 1;
-  padding: 10px;
-}
-button {
-  padding: 10px;
-}
-.card {
-  background: #f1f1f1;
-  padding: 10px;
-  margin-top: 10px;
-  border-left: 4px solid #d63384;
-}
-.pergunta {
-  font-weight: bold;
-}
-.resposta {
-  margin-top: 5px;
-}
-</style>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #f6f6f6;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      background: #ffffff;
+      width: 100%;
+      max-width: 700px;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .card {
+      background: #f1f1f1;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-left: 4px solid #d63384;
+      border-radius: 4px;
+    }
+
+    .pergunta {
+      font-weight: bold;
+    }
+
+    .resposta {
+      margin-top: 6px;
+    }
+  </style>
 </head>
 
 <body>
-<div class="container">
-  <h2>Central Inteligente</h2>
+  <div class="container">
+    <h1>Central Inteligente</h1>
 
-  <form id="form">
-    <input
-      id="pergunta"
-      placeholder="Digite sua pergunta..."
-      required
-    />
-    <button>Enviar</button>
-  </form>
+    <form id="formPergunta">
+      <input
+        type="text"
+        id="campoPergunta"
+        placeholder="Digite sua pergunta..."
+        required
+      />
+      <button type="submit">Enviar</button>
+    </form>
 
-  <div id="lista"></div>
-</div>
+    <div id="listaRespostas"></div>
+  </div>
 
 <script>
-/* ================= CONFIGURAÇÃO SUPABASE ================= */
+  /* ================= CONFIGURAÇÃO SUPABASE ================= */
 
-// URL do seu projeto
-const SUPABASE_URL = "https://pjrwtxskphvmdkfesevm.supabase.co";
+  const SUPABASE_URL = "https://pjrwtxskphvmdkfesevm.supabase.co";
 
-// ✅ ANON KEY JÁ INCLUÍDA (pública)
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqcnd0eHNrcGh2bWRrZmVzZXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwNjk2ODgsImV4cCI6MjA4MTY0NTY4OH0.9F4I5pvsV1FwAfOOynnsmtCOkwJFEHi7x2UBAwf4jWo";
+  // ✅ ANON KEY (pública)
+  const SUPABASE_ANON_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqcnd0eHNrcGh2bWRrZmVzZXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwNjk2ODgsImV4cCI6MjA4MTY0NTY4OH0.9F4I5pvsV1FwAfOOynnsmtCOkwJFEHi7x2UBAwf4jWo";
 
-// evita erro de redeclaração no TrebEdit
-if (!window.supabaseClient) {
-  window.supabaseClient = supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY
-  );
-}
+  // evita erro de redeclaração
+  if (!window.supabaseClient) {
+    window.supabaseClient = supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
+  }
 
-const supabaseClient = window.supabaseClient;
+  const supabaseClient = window.supabaseClient;
 
-/* ================= FUNÇÕES ================= */
+  /* ================= FUNÇÕES ================= */
 
-// chama a Edge Function (OpenAI está no backend)
-async function gerarResposta(pergunta) {
-  const response = await fetch(
-    `${SUPABASE_URL}/functions/v1/gerar-resposta`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify({ pergunta })
-    }
-  );
+  // chama a Edge Function (OpenAI está no backend)
+  async function gerarRespostaIA(pergunta) {
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/gerar-resposta`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ pergunta })
+      }
+    );
 
-  const data = await response.json();
-  return data.resposta || "Não foi possível gerar resposta.";
-}
+    const data = await response.json();
+    return data.resposta || "Não foi possível gerar resposta.";
+  }
 
-// salva no Supabase
-async function salvarPergunta(pergunta, resposta) {
-  await supabaseClient
-    .from("perguntas")
-    .insert([{ texto: pergunta, resposta }]);
-}
+  // salva no banco
+  async function salvarPerguntaResposta(pergunta, resposta) {
+    await supabaseClient
+      .from("perguntas")
+      .insert([{ texto: pergunta, resposta }]);
+  }
 
-// carrega histórico
-async function carregarPerguntas() {
-  const { data } = await supabaseClient
-    .from("perguntas")
-    .select("*")
-    .order("created_at", { ascending: false });
+  // carrega histórico
+  async function carregarHistorico() {
+    const { data } = await supabaseClient
+      .from("perguntas")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  const lista = document.getElementById("lista");
-  lista.innerHTML = "";
+    const lista = document.getElementById("listaRespostas");
+    lista.innerHTML = "";
 
-  data.forEach(item => {
-    lista.innerHTML += `
-      <div class="card">
-        <div class="pergunta">${item.texto}</div>
-        <div class="resposta">${item.resposta}</div>
-      </div>
-    `;
-  });
-}
+    data.forEach(item => {
+      lista.innerHTML += `
+        <div class="card">
+          <div class="pergunta">${item.texto}</div>
+          <div class="resposta">${item.resposta}</div>
+        </div>
+      `;
+    });
+  }
 
-/* ================= EVENTO ================= */
+  /* ================= EVENTO ================= */
 
-document.getElementById("form").addEventListener("submit", async e => {
-  e.preventDefault();
+  document
+    .getElementById("formPergunta")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-  const input = document.getElementById("pergunta");
-  const pergunta = input.value;
-  input.value = "";
+      const campo = document.getElementById("campoPergunta");
+      const pergunta = campo.value.trim();
 
-  const resposta = await gerarResposta(pergunta);
-  await salvarPergunta(pergunta, resposta);
-  carregarPerguntas();
-});
+      if (!pergunta) return;
 
-/* ================= INICIAL ================= */
-carregarPerguntas();
+      campo.value = "";
+
+      const resposta = await gerarRespostaIA(pergunta);
+      await salvarPerguntaResposta(pergunta, resposta);
+      carregarHistorico();
+    });
+
+  /* ================= INICIAL ================= */
+
+  carregarHistorico();
 </script>
 </body>
 </html>
